@@ -1,6 +1,6 @@
 # Running the test network
 
-This repo contains a simple Hyperledger Fabric chaincode used for basic user management.The blockchain contains 1 peer each from organization 1 (Org1) and organization 2 (Org2). A channel was created for these 2 peers in the blockchain. The chaincode was deployed on this channel. There is also an ordering service to support transaction ordering into blocks for distribution. All of them has their own Certificates.
+This repo contains a simple Hyperledger Fabric chaincode used for basic user management. The blockchain contains 1 peer each from organization 1 (Org1) and organization 2 (Org2). A channel was created for these 2 peers in the blockchain. The chaincode was deployed on this channel. There is also an ordering service to support transaction ordering into blocks for distribution. All of them has their own Certificates.
 
 Please see Install.txt for steps to install HyperLedger Fabric 2.2.
 
