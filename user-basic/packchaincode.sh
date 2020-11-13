@@ -1,5 +1,5 @@
 # compile and pack the new chaincode
-cd ~/acronics/user-basic/chaincode-go
+
 GO111MODULE=on go mod vendor
 cd ../test-network
 export PATH=${PWD}/../bin:$PATH
