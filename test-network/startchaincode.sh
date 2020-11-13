@@ -2,7 +2,6 @@
 source scriptUtils.sh
 
 #Start chaincode
-cd ~/acronics/test-network/
 ./network.sh up
 ./network.sh createChannel
 ./network.sh deployCC

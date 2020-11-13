@@ -1,5 +1,5 @@
 #Interacting with the network
-cd ~/acronics/test-network/
+
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=$PWD/../config/
 export CORE_PEER_TLS_ENABLED=true

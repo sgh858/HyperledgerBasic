@@ -1,7 +1,7 @@
 # compile and pack the new chaincode
 cd ~/acronics/user-basic/chaincode-go
 GO111MODULE=on go mod vendor
-cd ../../test-network
+cd ../test-network
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=$PWD/../config/
 peer version
