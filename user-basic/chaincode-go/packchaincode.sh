@@ -1,7 +1,7 @@
 # compile and pack the new chaincode
 
 GO111MODULE=on go mod vendor
-cd ../test-network
+cd ../../test-network
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=$PWD/../config/
 peer version

@@ -5,22 +5,23 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 )
 
-// SmartContract provides functions for managing a AcronicUser
+// SmartContract provides functions for managing a BasicUser
 type SmartContract struct {
 	contractapi.Contract
 }
 
-// AcronicUser describes basic details of what makes up a simple user
-type AcronicUser struct {
+// BasicUser describes basic details of what makes up a simple user
+type BasicUser struct {
 	ID             string `json:"ID"`
 	Access_lvl     int    `json:"accessLevel"` // Access Level
 }
 
 // InitLedger adds a base set of users to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	users := []AcronicUser{
+	users := []BasicUser{
 		{ID: "Dennis", Access_lvl: 0},
 		{ID: "Mark", Access_lvl: 88},
 		{ID: "Sanjeev", Access_lvl: 88},
@@ -34,16 +35,16 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 
 		err = ctx.GetStub().PutState(user.ID, userJSON)
 		if err != nil {
-			return fmt.Errorf("failed to put to world state. %v", err)
+			return fmt.Errorf("failed to put to the ledger. %v", err)
 		}
 	}
 
 	return nil
 }
 
-// RegisterUser issues a new user to the world state with given details.
+// RegisterUser issues a new user to the the ledger with given details.
 func (s *SmartContract) RegisterUser(ctx contractapi.TransactionContextInterface, id string, accessLevel int) error {
-	exists, err := s.AcronicUserExists(ctx, id)
+	exists, err := s.BasicUserExists(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func (s *SmartContract) RegisterUser(ctx contractapi.TransactionContextInterface
 		return fmt.Errorf("Invalid access level %v. Range is 0..100!", accessLevel)
 	}
 
-	user := AcronicUser{
+	user := BasicUser{
 		ID:             id,
 		Access_lvl:     accessLevel, // Access level
 	}
@@ -67,17 +68,17 @@ func (s *SmartContract) RegisterUser(ctx contractapi.TransactionContextInterface
 	return ctx.GetStub().PutState(id, userJSON)
 }
 
-// GetUser returns the user stored in the world state with given id.
-func (s *SmartContract) GetUser(ctx contractapi.TransactionContextInterface, id string) (*AcronicUser, error) {
+// GetUser returns the user stored in the the ledger with given id.
+func (s *SmartContract) GetUser(ctx contractapi.TransactionContextInterface, id string) (*BasicUser, error) {
 	userJSON, err := ctx.GetStub().GetState(id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read from world state: %v", err)
+		return nil, fmt.Errorf("failed to read from the ledger: %v", err)
 	}
 	if userJSON == nil {
 		return nil, fmt.Errorf("the user %s does not exist", id)
 	}
 
-	var user AcronicUser
+	var user BasicUser
 	err = json.Unmarshal(userJSON, &user)
 	if err != nil {
 		return nil, err
@@ -86,11 +87,20 @@ func (s *SmartContract) GetUser(ctx contractapi.TransactionContextInterface, id 
 	return &user, nil
 }
 
-// UpdateUser updates an existing user in the world state with provided parameters.
+// UpdateUser updates an existing user in the the ledger with provided parameters.
 func (s *SmartContract) UpdateUser(ctx contractapi.TransactionContextInterface, id string, accessLevel int) error {
-	exists, err := s.AcronicUserExists(ctx, id)
+	exists, err := s.BasicUserExists(ctx, id)
 	if err != nil {
 		return err
+	}
+
+	approved, err := s.GetApproval(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !approved {
+		return fmt.Errorf("You don't have authority to use this function!") 
 	}
 
 	if accessLevel < 0 || accessLevel > 100 {
@@ -103,7 +113,7 @@ func (s *SmartContract) UpdateUser(ctx contractapi.TransactionContextInterface, 
 	}
 
 	// overwriting original user with new user
-	user := AcronicUser{
+	user := BasicUser{
 		ID:             id,
 		Access_lvl:     accessLevel,
 	}
@@ -115,9 +125,9 @@ func (s *SmartContract) UpdateUser(ctx contractapi.TransactionContextInterface, 
 	return ctx.GetStub().PutState(id, userJSON)
 }
 
-// DeleteUser deletes an given user from the world state.
+// DeleteUser deletes an given user from the the ledger.
 func (s *SmartContract) DeleteUser(ctx contractapi.TransactionContextInterface, id string) error {
-	exists, err := s.AcronicUserExists(ctx, id)
+	exists, err := s.BasicUserExists(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -128,18 +138,36 @@ func (s *SmartContract) DeleteUser(ctx contractapi.TransactionContextInterface, 
 	return ctx.GetStub().DelState(id)
 }
 
-// AcronicUserExists returns true when user with given ID exists in world state
-func (s *SmartContract) AcronicUserExists(ctx contractapi.TransactionContextInterface, id string) (bool, error) {
+// BasicUserExists returns true when user with given ID exists in the ledger
+func (s *SmartContract) BasicUserExists(ctx contractapi.TransactionContextInterface, id string) (bool, error) {
 	userJSON, err := ctx.GetStub().GetState(id)
 	if err != nil {
-		return false, fmt.Errorf("failed to read from world state: %v", err)
+		return false, fmt.Errorf("failed to read from the ledger: %v", err)
 	}
 
 	return userJSON != nil, nil
 }
 
-// GetAllUsers returns all users found in world state
-func (s *SmartContract) GetAllUsers(ctx contractapi.TransactionContextInterface) ([]*AcronicUser, error) {
+// GetApproval returns true when chaincode invoking user got the registered approval and role
+func (s *SmartContract) GetApproval(ctx contractapi.TransactionContextInterface) (bool, error) {
+	attrrole, ok, err := cid.GetAttributeValue(ctx.GetStub(), "role")
+	if err != nil {
+		fmt.Println("There was an error trying to retrieve the attribute.")
+		return false, err 
+	}
+	if !ok {
+   		fmt.Println("The client identity does not possess the attribute role.") 
+		return false, err
+	}
+	if attrrole == "approval" {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+// GetAllUsers returns all users found in the ledger
+func (s *SmartContract) GetAllUsers(ctx contractapi.TransactionContextInterface) ([]*BasicUser, error) {
 	// range query with empty string for startKey and endKey does an
 	// open-ended query of all users in the chaincode namespace.
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
@@ -148,14 +176,14 @@ func (s *SmartContract) GetAllUsers(ctx contractapi.TransactionContextInterface)
 	}
 	defer resultsIterator.Close()
 
-	var users []*AcronicUser
+	var users []*BasicUser
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return nil, err
 		}
 
-		var user AcronicUser
+		var user BasicUser
 		err = json.Unmarshal(queryResponse.Value, &user)
 		if err != nil {
 			return nil, err

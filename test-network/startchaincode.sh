@@ -1,8 +1,9 @@
+#!/bin/bash
 
 source scriptUtils.sh
 
 #Start chaincode
-./network.sh up
+./network.sh up -ca
 ./network.sh createChannel
 ./network.sh deployCC
 
